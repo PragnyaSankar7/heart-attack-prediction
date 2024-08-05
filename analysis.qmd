@@ -1,0 +1,168 @@
+---
+title: "Heart Attack"
+author: "Pragnyasri Sankar"
+format: html
+editor: visual
+---
+
+```{r}
+#|label: setup
+library(tidyverse)
+library(primer.data)
+library(tidybayes)
+library(brms)
+library(gtsummary)
+library(patchwork)
+```
+
+```{r}
+heart_data <- read.csv("heart.csv")
+head(heart_data)
+
+head(heart_data)
+```
+
+```{r}
+summary(heart_data)
+```
+
+
+```{r}
+plot_age <- ggplot(heart_data, aes(x = age, fill = factor(output))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Distribution of Heart Attack Presence by Age",
+       x = "Age",
+       y = "Count",
+       fill = "Heart Attack Presence") +
+  theme_minimal()
+
+# Create a bar plot for the distribution of heart attack presence by sex
+plot_sex <- ggplot(heart_data, aes(x = factor(sex), fill = factor(output))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Distribution of Heart Attack Presence by Sex",
+       x = "Sex",
+       y = "Count",
+       fill = "Heart Attack Presence") +
+  scale_x_discrete(labels = c("0" = "Female", "1" = "Male")) +
+  theme_minimal()
+
+# Create a scatter plot for age vs. maximum heart rate achieved
+plot_thalachh <- ggplot(heart_data, aes(x = age, y = thalachh, color = factor(output))) +
+  geom_point() +
+  labs(title = "Age vs. Maximum Heart Rate Achieved",
+       x = "Age",
+       y = "Maximum Heart Rate Achieved",
+       color = "Heart Attack Presence") +
+  theme_minimal()
+
+# Combine the plots into a single layout using gridExtra
+combined_plot <- grid.arrange(plot_age, plot_sex, plot_thalachh, ncol = 1)
+
+# Print the combined plot
+print(combined_plot)
+
+# Bayesian model using brms
+# Example model: Predicting heart attack presence using age and sex
+model <- brm(target ~ age + sex, data = heart_data, family = bernoulli(), prior = c(set_prior("normal(0, 1)", class = "b")))
+
+# Summarize the model
+summary(model)
+
+# Create a table summary using gtsummary
+tbl_summary(heart_data, by = output) %>%
+  add_p() %>%
+  modify_header(label ~ "**Variable**") %>%
+  modify_spanning_header(c(stat_1, stat_2) ~ "**Heart Attack Presence**") %>%
+  bold_labels()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+geom_bar(position = "dodge") +
+  labs(title = "Distribution of Heart Attack Presence by Age",
+       x = "Age",
+       y = "Count",
+       fill = "Heart Attack Presence") +
+  theme_minimal()
+
+# Histogram of Age
+ggplot(heart_data, aes(x = age)) +
+  geom_histogram(binwidth = 5, fill = "blue", color = "black") +
+  labs(title = "Age Distribution", x = "Age", y = "Frequency")
+
+
+
+ggplot(heart_data, aes(x = sex)) +
+  geom_bar(fill = "black", color = "black") +
+  labs(title = "Gender Distribution", x = "Gender", y = "Count")
+
+
+
+# Logistic regression model for Age
+age_model <- glm(output ~ age, data = heart_data, family = binomial)
+
+# Predict probabilities
+heart_data <- heart_data %>%
+  mutate(predicted_prob_age = predict(age_model, type = "response"))
+
+# Plot Age vs. Predicted Probability of Heart Attack
+ggplot(heart_data, aes(x = age, y = predicted_prob_age)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "blue") +
+  labs(title = "Predicted Probability of Heart Attack by Age", x = "Age", y = "Predicted Probability")
+
+# Logistic regression model for Gender
+gender_model <- glm(output ~ sex, data = heart_data, family = binomial)
+
+# Predict probabilities
+heart_data <- heart_data %>%
+  mutate(predicted_prob_gender = predict(gender_model, type = "response"))
+
+# Plot Gender vs. Predicted Probability of Heart Attack
+ggplot(heart_data, aes(x = sex, y = predicted_prob_gender, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Predicted Probability of Heart Attack by Gender", x = "Gender", y = "Predicted Probability")
+
+
+# Fit a Bayesian logistic regression model
+heart_model <- brm(
+  formula = output ~ age + sex + chol + trtbps + Diabetes + Family_History + Smoking + Obesity + Alcohol_Consumption + Exercise_Hours_Per_Week + Diet + Previous_Heart_Problems + Medication_Use + Stress_Level + Sedentary_Hours_Per_Day + BMI + Triglycerides + Physical_Activity_Days_Per_Week + Sleep_Hours_Per_Day + Income,
+  data = heart_data,
+  family = bernoulli(link = "logit"),
+  prior = set_prior("normal(0, 10)", class = "b"),
+  chains = 4, iter = 2000, warmup = 1000, seed = 123
+)
+
+# Summary of the model
+summary(heart_model)
+
+# Plot diagnostics
+plot(heart_model)
+
+
+# Create a summary table
+tbl_summary(
+  heart_data,
+  by = Heart_Attack_Risk,
+  statistic = list(all_continuous() ~ "{mean} ({sd})", all_categorical() ~ "{n} / {N} ({p}%)"),
+  digits = all_continuous() ~ 2
+) %>%
+  add_p() %>%
+  modify_header(label = "**Variable**") %>%
+  modify_spanning_header(c("stat_1", "stat_2") ~ "**Heart Attack Risk**")
+
+
+
